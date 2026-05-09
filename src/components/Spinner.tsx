@@ -9,7 +9,7 @@ import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growt
 import { isEnvTruthy } from '../utils/envUtils.js';
 import { count } from '../utils/array.js';
 import sample from 'lodash-es/sample.js';
-import { formatDuration, formatNumber, formatSecondsShort } from '../utils/format.js';
+import { formatDuration, formatNumber } from '../utils/format.js';
 import type { Theme } from 'src/utils/theme.js';
 import { activityManager } from '../utils/activityManager.js';
 import { getSpinnerVerbs } from '../constants/spinnerVerbs.js';
@@ -78,10 +78,8 @@ export function SpinnerWithVerb(props: Props): React.ReactNode {
   // teammate view needs the real spinner (which shows teammate status).
   const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId);
   // Hoisted to mount-time — this component re-renders at animation framerate.
-  const briefEnvEnabled =
-    feature('KAIROS') || feature('KAIROS_BRIEF')
-      ? useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_BRIEF), [])
-      : false;
+  const briefEnvEnabledRaw = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_BRIEF), []);
+  const briefEnvEnabled = feature('KAIROS') || feature('KAIROS_BRIEF') ? briefEnvEnabledRaw : false;
 
   // Runtime gate mirrors isBriefEnabled() but inlined — importing from
   // BriefTool.ts would leak tool-name strings into external builds. Single
@@ -244,7 +242,7 @@ function SpinnerWithVerbInner({
 
   // TTFT display is gated to internal builds — apiMetricsRef was removed from
   // props during a refactor, so skip this until it's re-threaded.
-  let ttftText: string | null = null;
+  const _ttftText: string | null = null;
 
   // When leader is idle but teammates are running (and we're viewing the leader),
   // show a static dim idle display instead of the animated spinner — otherwise

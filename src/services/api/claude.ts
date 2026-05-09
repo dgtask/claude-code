@@ -121,7 +121,6 @@ import {
   getAfkModeHeaderLatched,
   getCacheEditingHeaderLatched,
   getFastModeHeaderLatched,
-  getLastApiCompletionTimestamp,
   getPromptCache1hAllowlist,
   getPromptCache1hEligible,
   getSessionId,
@@ -253,7 +252,6 @@ import {
   type NonNullableUsage,
 } from './logging.js'
 import {
-  CACHE_TTL_1HOUR_MS,
   checkResponseForCacheBreak,
   recordPromptState,
 } from './promptCacheBreakDetection.js'
@@ -511,10 +509,30 @@ export function getAPIMetadata() {
     }
   }
 
+  const deviceId = getOrCreateUserID()
+
+  // Third-party API providers (DeepSeek, etc.) validate user_id against
+  // ^[a-zA-Z0-9_-]+$ which rejects JSON strings containing {, ", :, etc.
+  // When using a non-Anthropic base URL, send only the device_id (hex string).
+  const baseUrl = process.env.ANTHROPIC_BASE_URL
+  const isThirdParty =
+    baseUrl &&
+    (() => {
+      try {
+        return new URL(baseUrl).host !== 'api.anthropic.com'
+      } catch {
+        return false
+      }
+    })()
+
+  if (isThirdParty) {
+    return { user_id: deviceId }
+  }
+
   return {
     user_id: jsonStringify({
       ...extra,
-      device_id: getOrCreateUserID(),
+      device_id: deviceId,
       // Only include OAuth account UUID when actively using OAuth authentication
       account_uuid: getOauthAccountInfo()?.accountUuid ?? '',
       session_id: getSessionId(),
